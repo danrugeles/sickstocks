@@ -1,0 +1,12 @@
+All for 2013 - NASDAQ others not proved
+>="TFCO" for year <= 2012 -  NASDAQ
+
+Stored in stocks/
+
+Google finance:
+Have to change labor day count for normal days in googledata because of sparse data
+we might have fixed this by filling sparse data from highs and lows when closing price data was present.
+
+
+Yahoo finance:
+Have to normalize values

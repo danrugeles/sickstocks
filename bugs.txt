@@ -1,0 +1,28 @@
+CSUN,2012-05-17,1.31,2012-06-06,1.61,-0.186335403727 -- Should be fixed already with google data
+Split detector  -- Should be fixed already with improved yahoofinance
+Buscador        
+
+In results, theres duplicate transactions in january and may (2013): 
+vim Results/2013/Report_OTCBB_18_2.2_15_-0.05_True_1.25_0.75.csv
+
+APPZ,2013-01-31,1.577,2013-03-06,0.41,20,2.84634146341
+APPZ,2013-01-31,1.577,2013-03-06,0.41,20,2.84634146341
+
+
+
+
+
+
+888 brannan st, San Francisco
+
+
+Sent a mail with idea on how to Improve Airbnb
+
+
+1. Help hosts promote their homes using youtube
+2. Youtube generates publicity for Aribnb
+3. Airbnb can generate income from publicity
+
+
+independetly Ive promoted my house this way and within 2 weeks I have received very good comments on my idea. 
+

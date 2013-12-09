@@ -1,0 +1,5 @@
+numBought=1
+numSold=1
+wins=1
+losses=0
+totalEarnings=11.8793103448

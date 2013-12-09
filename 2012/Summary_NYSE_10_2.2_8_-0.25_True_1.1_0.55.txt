@@ -1,0 +1,5 @@
+numBought=0
+numSold=0
+wins=0
+losses=0
+totalEarnings=0.0
