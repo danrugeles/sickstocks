@@ -11,6 +11,14 @@ def getDate(dates,time):
 		#print "Warning: getDate(time) returned a future date after:",[int(match.group(2)),int(match.group(3)),int(match.group(1))]
 		return [int(match.group(2))-1,int(match.group(3)),int(match.group(1))]
 
+#DaniDate Format: [month-1,day,year]
+
+def yyyymmddToDaniDate(date):
+	year=date[:5]
+	month=date[5:7]
+	day=date[7:]	
+	return [int(month)-1,int(day),int(year)]
+
 
 def toDaniDate(date):
 	match=re.search(r"([\w]*)-([\w]*)-([\w]*)",date)

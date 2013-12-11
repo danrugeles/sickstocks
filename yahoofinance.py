@@ -60,6 +60,27 @@ def checkSplitTime(symbol,start,stop):
 	return False
 
 
+def getSplitFast(symbol):
+	splits=[]
+	try:
+		base_url="http://ichart.finance.yahoo.com/x?s="
+		url = base_url+symbol+"&a=00&b=1&c=2000&g=v&y=0&z=30000"	
+		response=urllib.urlopen(url)
+		html= response.read()
+		html=html.strip("\n").split("\n")
+		for line in html:
+			column=line.split(",")
+			if column[0]=="SPLIT":
+				#Column one has the year
+				#Column two has the split ratio
+				splits.append(yyyymmddToDaniDate(column[1]))
+		splits=array(splits)
+		return splits[::-1]
+		
+	except urllib.ContentTooShortError as e:
+		print e
+
+
 def getSplitTime(symbol,start,stop):
 	#numMonths=getMonthDiff(start,stop)
 	start_aux=start
@@ -71,10 +92,10 @@ def getSplitTime(symbol,start,stop):
 		try:
 			base_url="http://finance.yahoo.com/q/hp?s="		
 			url = base_url+symbol+"&d="+str(stop_aux[0])+"&e="+str(stop_aux[1])+"&f="+str(stop_aux[2])+"&a="+str(start_aux[0])+"&b="+str(start_aux[1])+"&c="+str(start_aux[2])+"&g=d"
-			#print url
+			print url
 			response=urllib.urlopen(url)
 			html= response.read()
-			match=re.findall(r"(\w\w\w) (\w\w), (\w\w\w\w)</([\w\s<>:\"=]*) (Stock Split)",html)
+			match=re.findall(r"(\w\w\w) (\w{1,2}), (\w\w\w\w)</([\w\s<>:\"=]*) (Stock Split)",html)
 
 			for m in match:
 					day=int(m[1])
@@ -520,12 +541,15 @@ def parseToList(symbol,year):
 
 if __name__=="__main__":
 
+
+	getSplitFast("MSFT")
+	
 	#UIHC from 2008 is lacking a lot of stock data 
 	
 	""" Google Vs Yahoo Vs Mixed"""
-	a,b,c,d,e=parseToList_yahoo("AAPL",2005)#APPZ
+	#a,b,c,d,e=parseToList_yahoo("AAPL",2005)#APPZ
 	#a2,b2,c2,d2,e2=parseToList_google("AAPL",2005)
-	a3,b3,c3,d3,e3= parseToList("AAPL",2005)
+	#a3,b3,c3,d3,e3= parseToList("AAPL",2005)
 	#for x,y,z,w,m,n in zip(a,a3,a2,c,c3,c2):
 	#	print x,y,z,w,m,n
 	#for x,y,z,w,p,q in zip(a,a3,c,c3,e,e3):
