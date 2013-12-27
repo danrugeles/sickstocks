@@ -12,11 +12,12 @@ def getStockOnline(symbol,year):
 	highs=[]
 	lows=[]
 	prices=[]
+	closes=[]
 	volume=[]
 	done=False
 	while not done:
 		try:
-			dates,highs,lows,prices,volume=parseToList_yahoo(symbol,year)
+			dates,highs,lows,prices,volume,closes=parseToList_yahoo(symbol,year)
 			done=True
 		except ValueError:
 			done=True
@@ -27,11 +28,11 @@ def getStockOnline(symbol,year):
 		except UnboundLocalError:
 			done=True
 
-	return dates,highs,lows,prices,volume
+	return dates,highs,lows,prices,volume,closes
 
 def getStockOffline(symbol,exchange,year):
 	try:
-		[dates,highs,lows,prices,volume]=load("Stocks/"+symbol+"_"+exchange+"_"+str(year)+".npy")
+		[dates,highs,lows,prices,volume,closes]=load("Stocks/"+symbol+"_"+exchange+"_"+str(year)+".npy")
 	except IOError: 
 		#Stock might be too new (exceptions: XTLB)
 		prices=array([])
@@ -39,15 +40,16 @@ def getStockOffline(symbol,exchange,year):
 		lows=array([])
 		volume=array([])
 		dates=array([])
+		closes=array([])
 	prices=prices.astype(np.float)
 	highs=highs.astype(np.float)
 	lows=lows.astype(np.float)
 	volume=volume.astype(np.float)
-	return dates,highs,lows,prices,volume
+	closes=closes.astype(np.float)
+	return dates,highs,lows,prices,volume,closes
 
 def getListAllStocks(i,exchange):
-	#Override ONLINE
-	print "Warning: getListAllStocks from downloadStocks overrode 'ONLINE' variable to be false"
+	#Override ONLINE to be False
 	if False:
 		response = urllib2.urlopen('http://eoddata.com/stocklist/'+exchange+'/'+chr(i)+'.htm')
 		html=response.read()
@@ -58,19 +60,18 @@ def getListAllStocks(i,exchange):
 		allstocks=load("StockList/"+chr(i)+"_"+exchange+".npy")
 	return allstocks
 
-
 def getStock(symbol,exchange,year):
 	if ONLINE:
-		dates,highs,lows,prices,volume=getStockOnline(symbol,year)
-		#save("Stocks/"+symbol+"_"+exchange+"_"+str(year),[dates,highs,lows,prices,volume])
-		save("../../../../Stocks/"+symbol+"_"+exchange+"_"+str(year),[dates,highs,lows,prices,volume])
+		dates,highs,lows,prices,volume,closes=getStockOnline(symbol,year)
+		#save("Stocks/"+symbol+"_"+exchange+"_"+str(year),[dates,highs,lows,prices,volume,closes])
+		save("../../../../Stocks/"+symbol+"_"+exchange+"_"+str(year),[dates,highs,lows,prices,volume,closes])
 	else:
-		dates,highs,lows,prices,volume=getStockOffline(symbol,exchange,year)
+		dates,highs,lows,prices,volume,closes=getStockOffline(symbol,exchange,year)
 		
-	return dates,highs,lows,prices,volume
+	return dates,highs,lows,prices,volume,closes
 	
 if __name__=="__main__":
-	for year in range(2004,1999,-1):#2013,1999,-1
+	for year in range(2003,1999,-1):#2013,1999,-1
 		for exchange in ["NASDAQ","NYSE","OTCBB","AMEX"]:#"NASDAQ","NYSE","OTCBB","AMEX"	
 			for i in xrange(65,91):#65,91# nasdaq desde el 73
 				allstocks=getListAllStocks(i,exchange)					
@@ -78,9 +79,9 @@ if __name__=="__main__":
 				for idx,stock in enumerate(allstocks):
 					symbol=stock[1]
 					#getStock(symbol,exchange,year)
-					if year==2004 and exchange=="AMEX" and symbol >"EFNL":		
+					if exchange=="OTCBB" and symbol >"HA":		
 						getStock(symbol,exchange,year)
-					#elif year==2009 and (exchange=="AMEX" or exchange =="OTCBB"):
-						#getStock(symbol,exchange,year)
-					elif year<2004:
+					elif (exchange=="AMEX" or exchange =="AMEX"):
+						getStock(symbol,exchange,year)
+					elif year<2003:
 						getStock(symbol,exchange,year)
