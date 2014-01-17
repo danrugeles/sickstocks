@@ -1,4 +1,5 @@
 import urllib
+import urllib2
 from numpy import *
 import datetime as dt
 from Date import *
@@ -13,12 +14,11 @@ import re
 
 DEBUG=False
 
-
-
 def checkSplit(symbol):
 	#if stop-start > 50:
 	#else:
 	now=dt.datetime.now()
+	
 	try:
 		#url = "http://finance.yahoo.com/q/hp?s="+symbol+"&a=10&b=1&c=2012&d=11&e=27&f=2012&g=d"
 		if now.month-5<0:
@@ -175,16 +175,19 @@ def cast2danidate(olddate):
 	return newdate
 
 
-
 #Get_Current_Data
 def getCurrentData(symbol):
+	#Number of months (int)
+	window_size=2
+	
 	now=dt.datetime.now()
 	base_url = "http://ichart.finance.yahoo.com/table.csv?s="
+	
 	try:
-		if now.month-5<0:
-			url=base_url + symbol + "&a="+str((now.month-5)%12)+"&b="+str(now.day)+"&c="+str(now.year-1)
+		if now.month-window_size<0:
+			url=base_url + symbol + "&a="+str((now.month-window_size)%12)+"&b="+str(now.day)+"&c="+str(now.year-1)
 		else:
-			url=base_url + symbol + "&a="+str((now.month-5)%12)+"&b="+str(now.day)+"&c="+str(now.year)
+			url=base_url + symbol + "&a="+str((now.month-window_size)%12)+"&b="+str(now.day)+"&c="+str(now.year)
 
 		response=urllib.urlopen(url)
 		html = response.read()	
@@ -192,24 +195,53 @@ def getCurrentData(symbol):
 		allinfo=html.strip("\n").split("\n")
 
 		dates=[]
-		prices=[]
+		highs=[]
+		lows=[]
 		volume=[]
+		closes=[]
+		prices=[]
 
 		for idx,info in enumerate(allinfo):
-
+			
 			if idx>0:
 				#Date,Open,High,Low,Close,Volume,Adj Close	
-				d,o,h,l,c,v,ac=info.split(',')			
-				dates.append(d)
-				prices.append(c)
-				volume.append(v)
+				d,o,h,l,c,v,ac=info.split(',')		
 
+				#** Adjust High and low prices
+				ac=float(ac)
+				c=float(c)
+				try: 	
+					adj=ac/c
+					closes.append(c)
+					prices.append(ac)
+					highs.append(float(h)*adj)
+					lows.append(float(l)*adj)
+					volume.append(v)
+				except ZeroDivisionError:
+					closes.append(0.0)
+					prices.append(0.0)
+					highs.append(0.0)
+					lows.append(0.0)
+					volume.append(0.0)
+		
+				dates.append(d)
+		
+		closes=array(closes)		
 		prices=array(prices)
-		prices=prices.astype(float)
+		highs=array(highs)
+		lows=array(lows)
 		volume=array(volume)
 		volume=volume.astype(float)
-		return dates,prices,volume
 
+		dates=dates[::-1]
+		closes=closes[::-1]
+		prices=prices[::-1]
+		highs=highs[::-1]
+		lows=lows[::-1]
+		volume=volume[::-1]
+
+		return dates,highs,lows,volume		
+	
 	except urllib.ContentTooShortError as e:
 		print e
 
@@ -236,6 +268,7 @@ def parseToList_yahoo(symbol,year):
 	allinfo=html.strip("\n").split("\n")
 
 	dates=[]
+	closes=[]
 	prices=[]
 	highs=[]
 	lows=[]
@@ -252,11 +285,13 @@ def parseToList_yahoo(symbol,year):
 			c=float(c)
 			try: 	
 				adj=ac/c
+				closes.append(c)
 				prices.append(ac)
 				highs.append(float(h)*adj)
 				lows.append(float(l)*adj)
 				volume.append(v)
 			except ZeroDivisionError:
+				closes.append(0.0)
 				prices.append(0.0)
 				highs.append(0.0)
 				lows.append(0.0)
@@ -264,7 +299,7 @@ def parseToList_yahoo(symbol,year):
 			
 			dates.append(d)
 			
-			
+	closes=array(closes)		
 	prices=array(prices)
 	highs=array(highs)
 	lows=array(lows)
@@ -272,18 +307,27 @@ def parseToList_yahoo(symbol,year):
 	volume=volume.astype(float)
 
 	dates=dates[::-1]
+	closes=closes[::-1]
 	prices=prices[::-1]
 	highs=highs[::-1]
 	lows=lows[::-1]
 	volume=volume[::-1]
 	
-	return dates,highs,lows,prices,volume
+	return dates,highs,lows,prices,volume,closes
 	
 	
 
 # GOOGLE --------------------------/
 # GOOGLE  -------------------------\
 # GOOGLE --------------------------/
+
+def pullIntraDay(symbol):
+	url="http://www.google.com/finance/getprices?q="+symbol+"&i=60&p=1d&f=d,h,l,c,v"
+	response=urllib.urlopen(url)
+	html= response.read()	
+	return parseGoogleIntradayData(html)
+	
+
 
 def pullData_google(symbol,year,start):
 	url="https://www.google.com/finance/historical?q="+symbol+"&startdate=Dec+1%2C+"+str(year-1)+"&enddate=Dec+31%2C+"+str(year)+"&num=200&start="+str(start)
@@ -344,6 +388,61 @@ def parseToList_google(symbol,year):
 			prices=hstack((prices2,prices))
 			
 	return dates,highs,lows,prices,volume
+
+def parseGoogleIntradayData(htmlresponse):
+	prices=[]
+	highs=[]
+	lows=[]
+	volume=[]
+	dates=[]
+
+	htmlresponse=htmlresponse.strip("\n").split("\n")
+	
+	for idx,m in enumerate(htmlresponse):
+		stream=m.split(",")
+		if idx==7:
+			t_init=int(stream[0].lstrip("a"))
+			dates.append(t_init)
+			highs.append(float(stream[1]))
+			lows.append(float(stream[2]))
+			prices.append(float(stream[3]))
+			volume.append(float(stream[4]))
+			
+		if idx>7:
+			dates.append(int(stream[0])+t_init)
+			highs.append(float(stream[1]))
+			lows.append(float(stream[2]))
+			prices.append(float(stream[3]))
+			volume.append(float(stream[4]))
+	
+	try:
+		prices=asarray(prices).astype(float)
+		highs=asarray(highs).astype(float)
+		lows=array(lows).astype(float)
+		
+
+	except ValueError:	#Fail in stocks with price greater than 1000 like GOOG 2013
+		prices=array([re.sub(",","",price) for price in prices])
+		prices=prices.astype(float)
+
+		highs=array([re.sub(",","",high) for high in highs])
+		prices=highs.astype(float)
+
+		lows=array([re.sub(",","",low) for low in lows])
+		lows=lows.astype(float)
+
+	volume=array(volume)
+	volume=volume.astype(float)
+
+	#dates=dates[::-1]
+	#prices=prices[::-1]
+	#highs=highs[::-1]
+	#lows=lows[::-1]
+	#volume=volume[::-1]
+
+	# the last prices overwrites the original close price not provided by google
+	return dates,highs,lows,prices,volume
+
 
 def parseGoogleData(htmlresponse):
 	prices=[]
@@ -438,8 +537,8 @@ def parseGoogleData(htmlresponse):
 	highs=highs[::-1]
 	lows=lows[::-1]
 	volume=volume[::-1]
-
-	return dates,highs,lows,prices,volume
+	# the last prices overwrites the original close price not provided by google
+	return dates,highs,lows,prices,volume,prices
 
 #* Mix of Yahoo and Google EOD Data
 def parseToList(symbol,year):
@@ -535,21 +634,36 @@ def parseToList(symbol,year):
 	l=array(l)
 	v=array(v)
 	
-	return d,h,l,p,v
+	return d,h,l,p,v,p #The last p overwrites the closes
 	
+def getListAllStocks(i,exchange):
+	#Override ONLINE
+	#print "Warning: getListAllStocks from downloadStocks overrode 'ONLINE' variable to be false"
+	if False:
+		response = urllib2.urlopen('http://eoddata.com/stocklist/'+exchange+'/'+chr(i)+'.htm')
+		html=response.read()
+		response.close()
+		allstocks=re.findall(r"(<A href=\"/stockquote/"+exchange+"/)(\w*)(.htm)",html)
+		save("StockList/"+chr(i)+"_"+exchange,allstocks)
+	else:
+		allstocks=load("StockList/"+chr(i)+"_"+exchange+".npy")
+	return allstocks
+
+
+
 
 
 if __name__=="__main__":
 
-
-	getSplitFast("MSFT")
+	dates,highs,lows,prices,volume =pullIntraDay("MSFT")
+	#getSplitFast("MSFT")
 	
 	#UIHC from 2008 is lacking a lot of stock data 
 	
 	""" Google Vs Yahoo Vs Mixed"""
-	#a,b,c,d,e=parseToList_yahoo("AAPL",2005)#APPZ
-	#a2,b2,c2,d2,e2=parseToList_google("AAPL",2005)
-	#a3,b3,c3,d3,e3= parseToList("AAPL",2005)
+	#a,b,c,d,e,f=parseToList_yahoo("AAPL",2005)#APPZ
+	#a2,b2,c2,d2,e2,f2=parseToList_google("AAPL",2005)
+	#a3,b3,c3,d3,e3,f3= parseToList("AAPL",2005)
 	#for x,y,z,w,m,n in zip(a,a3,a2,c,c3,c2):
 	#	print x,y,z,w,m,n
 	#for x,y,z,w,p,q in zip(a,a3,c,c3,e,e3):
